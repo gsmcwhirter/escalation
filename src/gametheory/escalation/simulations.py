@@ -1,6 +1,42 @@
-import sys
-import multiprocessing as mp
 import cPickle
+import itertools
+import math
+import multiprocessing as mp
+import sys
+
+effective_zero_diff = 1e-11
+effective_zero = 1e-10
+
+def popEquals(last, this):
+    return not any(abs(i - j) >= effective_zero_diff for i, j in itertools.izip(last, this))
+
+def decideInteraction(strategy1, strategy2):
+    return (0.,0.)
+
+def stepGeneration(last_generation, strategies):
+    # x_i(t+1) = (a + u(e^i, x(t)))*x_i(t) / (a + u(x(t), x(t)))
+    # a is background (lifetime) birthrate
+
+    a = 1e-8
+
+    num_strategies = len(strategies)
+    fitness = [0] * num_strategies
+
+    for s1 in range(num_strategies):
+        for s2 in range(s1 + 1, num_strategies):
+            result = decideInteraction(strategies[s1], strategies[s2])
+            fitness[s1] += result[0]
+            fitness[s2] += result[1]
+
+    average_fitness = math.fsum(fitness[i] * last_generation[i] for i in range(num_strategies))
+
+    new_generation = [(a + fitness[i]) * last_generation[i] / (a + average_fitness) for i in range(num_strategies)]
+
+    for i in range(num_strategies):
+        if new_generation[i] < effective_zero:
+            new_generation[i] = 0.
+
+    return new_generation
 
 def runSimulation(strategies, filename = None, output_skip = 1, quiet = False):
     import numpy.random.mtrand as rand
@@ -19,47 +55,35 @@ def runSimulation(strategies, filename = None, output_skip = 1, quiet = False):
         print >>out, "Dimensionality: {0}".format(dimensions)
         print >>out, "Initial State"
         print >>out, initial_population
-        print >>out
 
-    #last_generation = ((0.,),(0.,))
-    #generation_count = 0
-    #while not pop_equals(last_generation, this_generation):
-    #    generation_count += 1
-    #    last_generation = this_generation
-    #    this_generation = step_generation(last_generation[0], last_generation[1], s_payoffs=s_payoffs, r_payoffs=r_payoffs)
-    #    #for i in this_generation:
-    #    #    assert(abs(math.fsum(i) - 1.) < effective_zero_diff)
-    #
-    #    if (not out_stdout or not quiet) and output_skip and generation_count % output_skip == 0:
-    #        print >>out, "-" * 72
-    #        print >>out, "Generation {0}".format(generation_count)
-    #        print >>out, "Senders:"
-    #        print >>out, "\t", this_generation[0]
-    #        print >>out, "Receivers:"
-    #        print >>out, "\t", this_generation[1]
-    #        print >>out
-    #        out.flush()
+    last_generation = (0.,)
+    this_generation = initial_population
+    generation_count = 0
 
-    #if not out_stdout or not quiet:
-    #    print >>out, "=" * 72
-    #    print >>out, "Stable state! ({0} generations)".format(generation_count)
-    #    print >>out, "Senders:"
-    #    print >>out, "\t", this_generation[0]
-    #    for i, pop in enumerate(this_generation[0]):
-    #        if pop != 0.:
-    #            print >>out, "\t\t",i,":", pop
-    #    print >>out
-    #    print >>out, "Receivers:"
-    #    print >>out, "\t", this_generation[1]
-    #    for i, pop in enumerate(this_generation[1]):
-    #        if pop != 0.:
-    #            print >>out, "\t\t",i,":", pop
+    while not popEquals(last_generation, this_generation):
+        generation_count += 1
+        last_generation = this_generation
+        this_generation = stepGeneration(last_generation, strategies)
+
+        if (not out_stdout or not quiet) and output_skip and generation_count % output_skip == 0:
+            print >>out, "-" * 72
+            print >>out, "Generation {0}".format(generation_count)
+            print >>out, "\t", this_generation
+            print >>out
+            out.flush()
+
+    if not out_stdout or not quiet:
+        print >>out, "=" * 72
+        print >>out, "Stable state! ({0} generations)".format(generation_count)
+        print >>out, "\t", this_generation
+        for i, pop in enumerate(this_generation):
+            if pop != 0.:
+                print >>out, "\t\t{0:>5}: {1}".format(i, pop)
 
     if not out_stdout:
         out.close()
 
-    #return ((initial_senders, initial_receivers), this_generation, generation_count)
-    return (0,)
+    return (initial_population, this_generation, generation_count)
 
 def runSimulationIMap(args):
     return runSimulation(*args)
@@ -81,12 +105,9 @@ def goBabyGo(options, num_types, num_thresholds):
 
     if not options.quiet:
         print "Running {0} duplications.".format(options.dup)
-        #print
-        #print "Strategies:"
-        #print strategies
 
     if options.file_dump:
-        tasks = [(strategies, output_base % (options.output_file % (i + 1,),), options.skip) for i in range(options.dup)]
+        tasks = [(strategies, output_base.format(options.output_file.format(i + 1)), options.skip) for i in range(options.dup)]
     else:
         tasks = [(strategies, None, options.skip, options.quiet)] * options.dup
 
@@ -95,7 +116,6 @@ def goBabyGo(options, num_types, num_thresholds):
     for result in results:
         finished_count += 1
         if not options.quiet:
-            #print result[2], result[1], result[0]
             print result
         print >>stats, cPickle.dumps(result)
         print >>stats
@@ -110,7 +130,7 @@ def run():
     oparser = OptionParser()
     oparser.add_option("-d", "--duplications", type="int", action="store", dest="dup", default=1, help="number of duplications")
     oparser.add_option("-o", "--output", action="store", dest="output_dir", default="./output", help="directory to dump output files")
-    oparser.add_option("-f", "--filename", action="store", dest="output_file", default="duplication_%i", help="output file name template")
+    oparser.add_option("-f", "--filename", action="store", dest="output_file", default="duplication_{0}", help="output file name template")
     oparser.add_option("-g", "--nofiledump", action="store_false", dest="file_dump", default=True, help="do not output duplication files")
     oparser.add_option("-k", "--skip", action="store", type="int", dest="skip", default=1, help="number of generations between dumping output -- 0 for only at the end")
     oparser.add_option("-s", "--statsfile", action="store", dest="stats_file", default="aggregate", help="file for aggregate stats to be dumped")
