@@ -11,6 +11,7 @@ setup (
     '': 'src',
   },
   namespace_packages = ['gametheory'],
+  requires = ["gametheory.base >= 0.1"],
   author = 'Gregory McWhirter',
   author_email = 'gmcwhirt@uci.edu',
   description = 'Game theory simulations for escalation research',

@@ -4,9 +4,6 @@ import math
 import multiprocessing as mp
 import sys
 
-effective_zero_diff = 1e-11
-effective_zero = 1e-10
-
 def popEquals(last, this):
     return not any(abs(i - j) >= effective_zero_diff for i, j in itertools.izip(last, this))
 
