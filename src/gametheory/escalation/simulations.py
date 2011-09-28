@@ -10,9 +10,9 @@ class Simulation(SimBase):
     def _setParserOptions(self):
         self._oparser.add_option("-t", "--types", action="store", type="int", dest="num_types", default=5, help="number of types (default 5)")
         self._oparser.add_option("-y", "--thresholds", action="store", type="int", dest="num_thresholds", default=5, help="number of thresholds (default 5)")
-        self._oparser.add_option("-co", "--cost-obs", action="store", type="float", dest="cost_obs", default=0.1, help="cost for observation (default 0.1)")
-        self._oparser.add_option("-cw", "--cost-win", action="store", type="float", dest="cost_win", default=0.2, help="cost for a fight winner (default 0.2)")
-        self._oparser.add_option("-cl", "--cost-loss", action="store", type="float", dest="cost_loss", default=0.5, help="cost for a fight loser (default 0.5)")
+        self._oparser.add_option("-b", "--cost-obs", action="store", type="float", dest="cost_obs", default=0.1, help="cost for observation (default 0.1)")
+        self._oparser.add_option("-w", "--cost-win", action="store", type="float", dest="cost_win", default=0.2, help="cost for a fight winner (default 0.2)")
+        self._oparser.add_option("-l", "--cost-loss", action="store", type="float", dest="cost_loss", default=0.5, help="cost for a fight loser (default 0.5)")
         self._oparser.add_option("-K", "--update_modulus", action="store", type="float", dest="update_modulus", default=1., help="factor for how strong updates are after observation (default 1)")
         self._oparser.add_option("-P", "--update_correct", action="store", type="float", dest="update_correct", default=1., help="probability updates will be correct (default 1)")
 
@@ -22,6 +22,21 @@ class Simulation(SimBase):
 
         if not self._options.num_thresholds or self._options.num_thresholds < 1:
             self._oparser.error("Number of thresholds must be at least 1")
+
+        if self._options.cost_obs < 0.:
+            self._oparser.error("Cost for observation must not be negative")
+
+        if self._options.cost_win < 0.:
+            self._oparser.error("Cost for winning must not be negative")
+
+        if self._options.cost_loss < 0.:
+            self._oparser.error("Cost for losing must not be negative")
+
+        if self._options.update_modulus < 0.:
+            self._oparser.error("Update modulus must not be negative")
+
+        if self._options.update_correct < 0. or self._options.update_correct > 1.:
+            self._oparser.error("Correct update probability must be between 0 and 1")
 
     def _setData(self):
         self._data['type_step'] = type_step = 1. / float(self._options.num_types + 1)
@@ -78,19 +93,23 @@ def runSimulation(args):
                     return (max(0.5 - obs_costs - cost_loss, 0.), max(1. - obs_costs - cost_win, 0.), True)
             elif p1 >= strategy1[2]:
                 if isFight(p2):
+                    fight = True
                     if player1Wins():
                         return (max(1. - obs_costs - cost_win, 0.), max(0.5 - obs_costs - cost_loss, 0.), True)
                     else:
                         return (max(0.5 - obs_costs - cost_loss, 0.), max(1. - obs_costs - cost_win, 0.), True)
                 else:
+                    run = True
                     return (max(1. - obs_costs, 0.), max(0.5 - obs_costs, 0.), False)
             elif p2 >= strategy2[2]:
                 if isFight(p1):
+                    fight = True
                     if player1Wins():
                         return (max(1. - obs_costs - cost_win, 0.), max(0.5 - obs_costs - cost_loss, 0.), True)
                     else:
                         return (max(0.5 - obs_costs - cost_loss, 0.), max(1. - obs_costs - cost_win, 0.), True)
                 else:
+                    run = True
                     return (max(0.5 - obs_costs, 0.), max(1. - obs_costs, 0.), False)
 
             obs_costs += cost_obs
@@ -148,8 +167,13 @@ def runSimulation(args):
         last_generation = (0.,)
         this_generation = initial_population
         generation_count = 0
+        force_stop = False
 
-        while not popEquals(last_generation, this_generation):
+        while not popEquals(last_generation, this_generation) and not force_stop:
+            if (generation_count >= 1e4):
+                force_stop = True
+                continue
+                
             generation_count += 1
             last_generation = this_generation
             this_generation = stepGeneration(last_generation, strategies, cost_obs, cost_win, cost_loss, update_modulus, update_correct)
@@ -163,11 +187,14 @@ def runSimulation(args):
 
         if not out_stdout or not quiet:
             print >>out, "=" * 72
-            print >>out, "Stable state! ({0} generations)".format(generation_count)
+            if force_stop:
+                print >>out, "Force stop! ({0} generations)".format(generation_count)
+            else:
+                print >>out, "Stable state! ({0} generations)".format(generation_count)
             print >>out, "\t", this_generation
             for i, pop in enumerate(this_generation):
                 if pop != 0.:
-                    print >>out, "\t\t{0:>5}: {1}".format(i, pop)
+                    print >>out, "\t\t{0:>5}: {1:>20}: {2}".format(i, strategies[i], pop)
 
         if not out_stdout:
             out.close()
