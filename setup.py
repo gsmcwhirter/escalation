@@ -5,13 +5,13 @@ from setuptools import setup, find_packages
 
 setup (
   name = 'gametheory.escalation',
-  version = '0.0.1',
+  version = '0.1',
   packages = find_packages('src'),
   package_dir = {
     '': 'src',
   },
   namespace_packages = ['gametheory'],
-  requires = ["gametheory.base >= 0.1"],
+  install_requires = ["gametheory.base >= 0.1"],
   author = 'Gregory McWhirter',
   author_email = 'gmcwhirt@uci.edu',
   description = 'Game theory simulations for escalation research',
