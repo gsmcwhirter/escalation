@@ -13,8 +13,8 @@ class Simulation(SimBase):
         self._oparser.add_option("-b", "--cost-obs", action="store", type="float", dest="cost_obs", default=0.1, help="cost for observation (default 0.1)")
         self._oparser.add_option("-w", "--cost-win", action="store", type="float", dest="cost_win", default=0.2, help="cost for a fight winner (default 0.2)")
         self._oparser.add_option("-l", "--cost-loss", action="store", type="float", dest="cost_loss", default=0.5, help="cost for a fight loser (default 0.5)")
-        self._oparser.add_option("-K", "--update_modulus", action="store", type="float", dest="update_modulus", default=1., help="factor for how strong updates are after observation (default 1)")
-        self._oparser.add_option("-P", "--update_correct", action="store", type="float", dest="update_correct", default=1., help="probability updates will be correct (default 1)")
+        self._oparser.add_option("-k", "--update_modulus", action="store", type="float", dest="update_modulus", default=1., help="factor for how strong updates are after observation (default 1)")
+        self._oparser.add_option("-p", "--update_correct", action="store", type="float", dest="update_correct", default=1., help="probability updates will be correct (default 1)")
 
     def _checkParserOptions(self):
         if not self._options.num_types or self._options.num_types < 1:
