@@ -1,26 +1,24 @@
-__author__="gmcwhirt"
-__date__ ="$Sep 26, 2011 2:43:53 PM$"
+#!/usr/bin/env python
 
-from setuptools import setup, find_packages
+from distutils.core import setup
 
 setup (
-  name = 'gametheory.escalation',
-  version = '0.1',
-  packages = find_packages('src'),
-  package_dir = {
-    '': 'src',
-  },
-  namespace_packages = ['gametheory'],
-  install_requires = ["gametheory.base >= 0.1"],
-  author = 'Gregory McWhirter',
-  author_email = 'gmcwhirt@uci.edu',
-  description = 'Game theory simulations for escalation research',
-  url = 'https://www.github.com/gsmcwhirter/gametheory',
-  license = 'MIT',
-  entry_points = {
-    "console_scripts": [
-        "gt.escalation.sim = gametheory.escalation.simulations:run",
-        "gt.escalation.stats = gametheory.escalation.stats:run"
+    name = 'gametheory.escalation',
+    version = '0.1',
+    packages = [
+        "gametheory.escalation"
+    ],
+    package_dir = {
+        '': 'src',
+    },
+    requires = ["gametheory.base >= 0.1"],
+    author = 'Gregory McWhirter',
+    author_email = 'gmcwhirt@uci.edu',
+    description = 'Game theory simulations for escalation research',
+    url = 'https://www.github.com/gsmcwhirter/gametheory',
+    license = 'MIT',
+    scripts = [
+        "scripts/gt.escalation.sim",
+        "scripts/gt.escalation.stats"
     ]
-  }
 )

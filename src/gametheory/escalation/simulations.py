@@ -1,13 +1,16 @@
 import itertools
 import math
+import numpy.random as rand
 import sys
 
-from gametheory.base.simulation import effective_zero_diff, effective_zero
 from gametheory.base.simulation import Simulation as SimBase
+from gametheory.base.simulation import SimulationBatch as SimBatchBase
 
-class Simulation(SimBase):
+effective_zero = 1e-10
 
-    def _setParserOptions(self):
+class SimulationBatch(SimBatchBase):
+
+    def _set_options(self):
         self._oparser.add_option("-t", "--types", action="store", type="int", dest="num_types", default=5, help="number of types (default 5)")
         self._oparser.add_option("-y", "--thresholds", action="store", type="int", dest="num_thresholds", default=5, help="number of thresholds (default 5)")
         self._oparser.add_option("-b", "--cost-obs", action="store", type="float", dest="cost_obs", default=0.1, help="cost for observation (default 0.1)")
@@ -16,7 +19,7 @@ class Simulation(SimBase):
         self._oparser.add_option("-k", "--update_modulus", action="store", type="float", dest="update_modulus", default=1., help="factor for how strong updates are after observation (default 1)")
         self._oparser.add_option("-p", "--update_correct", action="store", type="float", dest="update_correct", default=1., help="probability updates will be correct (default 1)")
 
-    def _checkParserOptions(self):
+    def _check_options(self):
         if not self._options.num_types or self._options.num_types < 1:
             self._oparser.error("Number of types must be at least 1")
 
@@ -38,23 +41,30 @@ class Simulation(SimBase):
         if self._options.update_correct < 0. or self._options.update_correct > 1.:
             self._oparser.error("Correct update probability must be between 0 and 1")
 
-    def _setData(self):
+    def _set_data(self):
         self._data['type_step'] = type_step = 1. / float(self._options.num_types + 1)
         self._data['thresh_step'] = thresh_step = 1. / float(self._options.num_thresholds + 1)
         self._data['strategies'] = tuple([(i * type_step, j * thresh_step, (j+k) * thresh_step) for i in range(1, self._options.num_types + 1) for j in range(1, self._options.num_thresholds + 1) for k in range(self._options.num_thresholds + 1 - j)])
 
-    def _buildTask(self):
-        return [self._data['strategies'], self._options.cost_obs, self._options.cost_win, self._options.cost_loss, self._options.update_modulus, self._options.update_correct]
+        self._data['cost_obs'] = self._options.cost_obs
+        self._data['cost_win'] = self._options.cost_win
+        self._data['cost_loss'] = self._options.cost_loss
+        self._data['update_modulus'] = self._options.update_modulus
+        self._data['update_correct'] = self._options.update_correct
 
-    
-def runSimulation(args):
-    import numpy.random.mtrand as rand
-    rand.seed()
+class Simulation(SimBase):
 
-    def popEquals(last, this):
-        return not any(abs(i - j) >= effective_zero_diff for i, j in itertools.izip(last, this))
+    @staticmethod
+    def pop_equals(last, this):
+        return not any(abs(i - j) >= effective_zero for i, j in itertools.izip(last, this))
 
-    def decideInteraction(strategy1, strategy2, cost_obs, cost_win, cost_loss, update_modulus, update_correct):
+    def decide_interaction(self, strategy1, strategy2):
+        cost_obs = self._data['cost_obs']
+        cost_win = self._data['cost_win']
+        cost_loss = self._data['cost_loss']
+        update_modulus = self._data['update_modulus']
+        update_correct = self._data['update_correct']
+
         p1 = 0.5
         p2 = 0.5
 
@@ -122,18 +132,19 @@ def runSimulation(args):
                 p2 += adjustment
 
 
-    def stepGeneration(last_generation, strategies, cost_obs, cost_win, cost_loss, update_modulus, update_correct):
+    def step_generation(self, last_generation):
         # x_i(t+1) = (a + u(e^i, x(t)))*x_i(t) / (a + u(x(t), x(t)))
         # a is background (lifetime) birthrate
-
         a = 1e-8
+
+        strategies = self._data['strategies']
 
         num_strategies = len(strategies)
         fitness = [0] * num_strategies
 
         for s1 in range(num_strategies):
             for s2 in range(s1 + 1, num_strategies):
-                result = decideInteraction(strategies[s1], strategies[s2], cost_obs, cost_win, cost_loss, update_modulus, update_correct)
+                result = self.decide_interaction(strategies[s1], strategies[s2])
                 fitness[s1] += result[0]
                 fitness[s2] += result[1]
 
@@ -147,11 +158,14 @@ def runSimulation(args):
 
         return tuple(new_generation)
 
-    def _run(strategies, cost_obs, cost_win, cost_loss, update_modulus, update_correct, filename = None, output_skip = 1, quiet = False):
+    def run(self):
+        rand.seed()
 
-        if filename:
+        strategies = self._data['strategies']
+
+        if self._outfile:
             out_stdout = False
-            out = open(filename, "w")
+            out = open(self._outfile, "w")
         else:
             out_stdout = True
             out = sys.stdout
@@ -159,7 +173,7 @@ def runSimulation(args):
         dimensions = len(strategies)
         initial_population = tuple(rand.dirichlet([1] * dimensions))
 
-        if not out_stdout or not quiet:
+        if not out_stdout or not self._quiet:
             print >>out, "Dimensionality: {0}".format(dimensions)
             print >>out, "Initial State"
             print >>out, initial_population
@@ -169,29 +183,29 @@ def runSimulation(args):
         generation_count = 0
         force_stop = False
 
-        while not popEquals(last_generation, this_generation) and not force_stop:
+        while not self.pop_equals(last_generation, this_generation) and not force_stop:
             if (generation_count >= 1e4):
                 force_stop = True
                 continue
-                
+
             generation_count += 1
             last_generation = this_generation
-            this_generation = stepGeneration(last_generation, strategies, cost_obs, cost_win, cost_loss, update_modulus, update_correct)
+            this_generation = self.step_generation(last_generation)
 
-            if (not out_stdout or not quiet) and output_skip and generation_count % output_skip == 0:
+            if (not out_stdout or not self._quiet) and self._skip and generation_count % self._skip == 0:
                 print >>out, "-" * 72
                 print >>out, "Generation {0}".format(generation_count)
-                print >>out, "\t", this_generation
+                print >>out, "\t{0}".format(this_generation)
                 print >>out
                 out.flush()
 
-        if not out_stdout or not quiet:
+        if not out_stdout or not self._quiet:
             print >>out, "=" * 72
             if force_stop:
                 print >>out, "Force stop! ({0} generations)".format(generation_count)
             else:
                 print >>out, "Stable state! ({0} generations)".format(generation_count)
-            print >>out, "\t", this_generation
+            print >>out, "\t{0}".format(this_generation)
             for i, pop in enumerate(this_generation):
                 if pop != 0.:
                     print >>out, "\t\t{0:>5}: {1:>20}: {2}".format(i, strategies[i], pop)
@@ -200,12 +214,3 @@ def runSimulation(args):
             out.close()
 
         return (initial_population, this_generation, generation_count)
-
-    return _run(*args)
-
-def run():
-    sim = Simulation(runSimulation)
-    sim.go()
-
-if __name__ == "__main__":
-    run()
