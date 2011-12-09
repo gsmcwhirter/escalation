@@ -1,0 +1,3 @@
+gametheory.escalation
+gametheory.base>=0.1
+numpy>=1.5
