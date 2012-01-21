@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup (
     name = 'gametheory.escalation',
-    version = '0.2.0',
+    version = '0.2.1',
     packages = [
         "gametheory.escalation"
     ],
@@ -13,7 +13,7 @@ setup (
     },
     install_requires = [
         'distribute',
-        'gametheory.base (>=0.3.4)'
+        'gametheory.base'
     ],
     dependency_links = ["https://www.ideafreemonoid.org/pip"],
     test_suite = 'nose.collector',
