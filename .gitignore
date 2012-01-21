@@ -1,0 +1,13 @@
+*.pyc
+*.pyo
+*.png
+output*
+nbproject
+build
+dist
+*.egg-info
+*/src/setup.py
+*/src/setup.py
+gametheory.komodoproject
+MANIFEST
+.coverage
