@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup (
     name = 'gametheory.escalation',
-    version = '0.2',
+    version = '0.2.0',
     packages = [
         "gametheory.escalation"
     ],
