@@ -13,7 +13,7 @@ setup (
     },
     install_requires = [
         'distribute',
-        'gametheory.base'
+        'gametheory.base >= 0.3.6'
     ],
     dependency_links = ["https://www.ideafreemonoid.org/pip"],
     test_suite = 'nose.collector',
