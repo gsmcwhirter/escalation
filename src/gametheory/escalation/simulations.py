@@ -5,6 +5,9 @@ from gametheory.base.simulation import SimulationBatch as SimBatchBase
 
 class SimulationBatch(SimBatchBase):
     
+    #def __init__(self, *args, **kwdargs):
+    #    SimBatchBase.__init__(self, *args, default_handlers=False, **kwdargs)
+    
     def _add_listeners(self):
 
         def _set_options(this):
@@ -42,7 +45,7 @@ class SimulationBatch(SimBatchBase):
             this.data['type_step'] = type_step = 1. / float(this.options.num_types + 1)
             this.data['thresh_step'] = thresh_step = 1. / float(this.options.num_thresholds + 1)
             
-            this._simulation_class.types = tuple([(i * type_step, j * thresh_step, (j+k) * thresh_step) for i in range(1, this.options.num_types + 1) for j in range(1, this.options.num_thresholds + 1) for k in range(this.options.num_thresholds + 1 - j)]) 
+            this.data['types'] = tuple([(i * type_step, j * thresh_step, (j+k) * thresh_step) for i in range(1, this.options.num_types + 1) for j in range(1, this.options.num_thresholds + 1) for k in range(this.options.num_thresholds + 1 - j)]) 
 
             this.data['cost_obs'] = this.options.cost_obs
             this.data['cost_win'] = this.options.cost_win
@@ -56,10 +59,15 @@ class SimulationBatch(SimBatchBase):
 
 class Simulation(OPDRD):
     
-    background_rate = 1e-8
+    def __init__(self, *args, **kwdargs):
+        
+        #OPDRD.__init__(self, *args, background_rate=1e-8, default_handlers=False, **kwdargs)
+        OPDRD.__init__(self, *args, background_rate=1e-8, **kwdargs)
+        self.types = self.data['types']
     
     def _add_listeners(self):
         def generation_handler(this, num, thispop, lastpop):
+            print >> this.out, num
             if num >= 1e4:
                 this.force_stop = True
         
