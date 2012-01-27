@@ -7,7 +7,7 @@ from setuptools import setup
 
 setup (
     name = 'gametheory.escalation',
-    version = '0.2.2',
+    version = '0.2.3',
     packages = [
         "gametheory.escalation"
     ],
