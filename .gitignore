@@ -11,3 +11,7 @@ dist
 gametheory.komodoproject
 MANIFEST
 .coverage
+bin
+include
+lib
+local
