@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+from distribute_setup import use_setuptools
+use_setuptools()
+
 from setuptools import setup
 
 setup (
@@ -8,13 +11,13 @@ setup (
     packages = [
         "gametheory.escalation"
     ],
-    package_dir = {
-        '': 'src',
-    },
     install_requires = [
         'distribute',
         'gametheory.base >= 0.3.6'
     ],
+    package_dir = {
+        '': 'src',
+    },
     dependency_links = ["https://www.ideafreemonoid.org/pip"],
     test_suite = 'nose.collector',
     tests_require = ['nose'],
