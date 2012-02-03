@@ -7,7 +7,7 @@ from setuptools import setup
 
 setup(
     name='escalation',
-    version='0.3.1',
+    version='0.3.2',
     author='Gregory McWhirter',
     author_email='gmcwhirt@uci.edu',
     description='Game theory simulations for escalation research',
