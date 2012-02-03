@@ -7,7 +7,7 @@ from setuptools import setup
 
 setup(
     name='escalation',
-    version='0.2.3',
+    version='0.3.0',
     packages=[
         "escalation"
     ],
