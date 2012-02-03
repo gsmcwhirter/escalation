@@ -1,14 +1,14 @@
 import numpy.random as rand
 
-from gametheory.base.dynamics.discrete_replicator import OnePopDiscreteReplicatorDynamics as OPDRD
-from gametheory.base.simulation import SimulationBatch as SimBatchBase
+from simulations.dynamics.onepop_discrete_replicator import OnePopDiscreteReplicatorDynamics as OPDRD
+from simulations.simulation_runner import SimulationRunner as SimBatchBase
+
 
 class SimulationBatch(SimBatchBase):
-    
-    #def __init__(self, *args, **kwdargs):
-    #    SimBatchBase.__init__(self, *args, default_handlers=False, **kwdargs)
-    
+
     def _add_listeners(self):
+
+        super(SimulationBatch, self)._add_listeners()
 
         def _set_options(this):
             this.oparser.add_option("-t", "--types", action="store", type="int", dest="num_types", default=5, help="number of types (default 5)")
@@ -44,40 +44,42 @@ class SimulationBatch(SimBatchBase):
         def _set_data(this):
             this.data['type_step'] = type_step = 1. / float(this.options.num_types + 1)
             this.data['thresh_step'] = thresh_step = 1. / float(this.options.num_thresholds + 1)
-            
-            this.data['types'] = tuple([(i * type_step, j * thresh_step, (j+k) * thresh_step) for i in range(1, this.options.num_types + 1) for j in range(1, this.options.num_thresholds + 1) for k in range(this.options.num_thresholds + 1 - j)]) 
+
+            this.data['types'] = tuple([(i * type_step, j * thresh_step, (j + k) * thresh_step) for i in range(1, this.options.num_types + 1) for j in range(1, this.options.num_thresholds + 1) for k in range(this.options.num_thresholds + 1 - j)])
 
             this.data['cost_obs'] = this.options.cost_obs
             this.data['cost_win'] = this.options.cost_win
             this.data['cost_loss'] = this.options.cost_loss
             this.data['update_modulus'] = this.options.update_modulus
             this.data['update_correct'] = this.options.update_correct
-            
+
         self.on('oparser set up', _set_options)
         self.on('options parsed', _check_options)
         self.on('options parsed', _set_data)
 
+
 class Simulation(OPDRD):
-    
+
     def __init__(self, *args, **kwdargs):
-        
-        #OPDRD.__init__(self, *args, background_rate=1e-8, default_handlers=False, **kwdargs)
-        OPDRD.__init__(self, *args, background_rate=1e-8, **kwdargs)
+
+        super(Simulation, self).__init__(*args, background_rate=1e-8, **kwdargs)
         self.types = self.data['types']
-    
+
     def _add_listeners(self):
+        super(Simulation, self)._add_listeners()
+
         def generation_handler(this, num, thispop, lastpop):
             print >> this.out, num
             if num >= 1e4:
                 this.force_stop = True
-        
+
         self.on('generation', generation_handler)
 
     def _interaction(self, my_place, profile):
-        
+
         strategy1 = self.types[profile[my_place]]
         strategy2 = self.types[profile[my_place]]
-        
+
         cost_obs = self.data['cost_obs']
         cost_win = self.data['cost_win']
         cost_loss = self.data['cost_loss']
